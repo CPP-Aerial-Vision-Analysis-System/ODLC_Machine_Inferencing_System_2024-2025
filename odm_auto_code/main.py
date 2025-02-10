@@ -10,11 +10,13 @@ print("Docker container started. Running in the background...")
 
 node = Node("localhost", 3000)
 
+# Results path
+source_folder = r'./results'
+
 # add proper jetson directory here
 image_folder = r'C:\Users\valde\Desktop\projects\ODM\datasets\drone_dataset_brighton_beach-master\images'
 
 image_paths = [os.path.join(image_folder, f) for f in os.listdir(image_folder) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
-
 
 try:
     if not image_paths:
@@ -33,28 +35,20 @@ try:
         print("Task completed, downloading results...")
 
         # Retrieve results
-        task.download_assets("./results")
+        task.download_assets(source_folder)
+        print(f"Assets saved in {source_folder} (%s)" % os.listdir(source_folder))
 
-        print("Assets saved in ./results (%s)" % os.listdir("./results"))
-
-        # Restart task and compute DTM
-        task.restart({'dtm': True})
-        task.wait_for_completion()
-
-        print("Task completed, downloading results...")
-
-        task.download_assets("./results_with_dtm")
-
-        print("Assets saved in ./results_with_dtm (%s)" % os.listdir("./results_with_dtm"))
     except exceptions.TaskFailedError as e:
         print("\n".join(task.output()))
-
 except exceptions.NodeConnectionError as e:
     print("Cannot connect: %s" % e)
 except exceptions.NodeResponseError as e:
     print("Error: %s" % e)
 except FileNotFoundError as e:
     print(e)
+
+print("Stopping Docker Container...")
+subprocess.run(["docker", "stop", "nodeodm"], shell=True)
 
 # ---------------------------------------
 # # Define the ODM docker command
