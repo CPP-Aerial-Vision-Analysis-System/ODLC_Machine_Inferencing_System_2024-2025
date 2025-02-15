@@ -4,7 +4,7 @@ import shutil
 
 source_folder = r'./results'
 
-destination_folder = r'D:\test'
+destination_folder = r'D:\test_results'
 
 os.makedirs(destination_folder, exist_ok=True)
 
