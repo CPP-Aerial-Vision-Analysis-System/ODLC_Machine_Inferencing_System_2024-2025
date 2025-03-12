@@ -1,0 +1,37 @@
+Make changes to current directories in main.py and copy_transfer.py
+run_files.py will work 
+
+"process" variable may need to be changed to correctly reflect what would be done in Linux. 
+This is on line 8 on main.py
+
+source_folder would create a results folder in the same folder as the python files
+
+image_folder location is the input folder that ODM will scan and analyze
+https://www.opendronemap.org/odm/datasets/ 
+
+pip install -U pyodm 
+
+Be sure to have docker installed and Running
+
+With pyodm installed, you should be able to run the python files. Be sure Docker is running in the background or errors may occur.
+
+For copy_transfer.py, be sure to have the path for the destination_folder is defined.
+
+main.py can be run by itself as well as copy_transfer.py
+
+mapping_trans.sh is a simple shell script that just run the files in the same folder, there shouldnt be any problem to it in my assumption.
+
+Note: 
+
+Instructions for PyODM and ODM can also be seen on the main.py file on line 67.
+
+If you wish to see the 3d renders of a location. You can open WebODM but it will need to download the repo and follow the instructions given on their markdown file
+https://github.com/OpenDroneMap/WebODM?tab=readme-ov-file#run-the-docker-version-as-a-linux-service
+
+ODM:
+https://github.com/OpenDroneMap/ODM 
+
+Stated that easiest way to run it is through docker for terminal use, doing a docker run with the dataset.
+
+
+

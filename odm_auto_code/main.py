@@ -68,11 +68,4 @@ Steps For: PyODM Version
 pip install -U pyodm
 Change the image_folder location
 
-Steps For: ODM Terminal
-
-Download ODM and find its location ex: C:/Users/valde/Desktop/projects/
-
-Make a "datasets" folder inside it and add whatever datasets you like.
-
-define the dataset name ex: 'drone_dataset_brighton_beach-master'
 '''
