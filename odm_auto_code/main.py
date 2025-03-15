@@ -38,7 +38,7 @@ node = Node("localhost", 3000)
 source_folder = r'./results'
 
 # add proper jetson directory here
-image_folder = r'C:\Users\valde\Desktop\projects\ODM\datasets\drone_dataset_brighton_beach-master\images'
+image_folder = r'/home/astra/ODLC_Machine_Inferencing_System_2024-2025/odm_auto_code/datasets/drone_dataset_brighton_beach/images'
 
 image_paths = [os.path.join(image_folder, f) for f in os.listdir(image_folder) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
 
@@ -56,6 +56,14 @@ try:
         # Wait for completion
         task.wait_for_completion()
 
+        print("Task completed, downloading results...")
+
+        # Retrieve results 
+        task.download_assets(source_folder)
+
+        # print(f"Assets saved in {source_folder} (%s)" % os.listdir(source_folder))
+
+
         # stop container first before transferring files
         print(f"stopping docker container {container_id}...")
         subprocess.run(['docker', 'stop', container_id])
@@ -63,11 +71,6 @@ try:
         # produce connection aborted error (ConnectionAbortedError(10053...))
 
         print("Task completed, downloading results...")
-
-        # Retrieve results 
-        task.download_assets(source_folder)
-
-        # print(f"Assets saved in {source_folder} (%s)" % os.listdir(source_folder))
 
     except exceptions.TaskFailedError as e:
         print("\n".join(task.output()))
