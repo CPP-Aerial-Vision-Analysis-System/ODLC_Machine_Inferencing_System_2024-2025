@@ -1,12 +1,36 @@
 import subprocess
 import os
 import sys
+import time
 sys.path.append('..')
 
 from pyodm import Node, exceptions
 
-process = subprocess.Popen(["docker", "run", "-ti", "-p", "3000:3000", "opendronemap/nodeodm"])
-print("Docker container started. Running in the background...")
+
+# running this process would require wiping past docker containers that have the same name nodeodm
+# process = subprocess.Popen(
+#     ["docker", "run", "-d", "--name", "nodeodm", "-p", "3000:3000", "opendronemap/nodeodm"],
+# )
+
+# Start the container and capture its ID
+process = subprocess.Popen(
+    ["docker", "run", "-d", "-p", "3000:3000", "opendronemap/nodeodm"],
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE
+)
+
+container_id, error = process.communicate()
+
+if error:
+    print(f"Error starting container: {error.decode()}")
+    exit(1)
+
+# Decode container ID from bytes to string and strip any extra whitespace
+container_id = container_id.decode().strip()
+print(f"Docker container started with ID: {container_id}")
+
+# Wait for the container to be fully initialized
+time.sleep(10)  
 
 node = Node("localhost", 3000)
 
@@ -32,11 +56,18 @@ try:
         # Wait for completion
         task.wait_for_completion()
 
+        # stop container first before transferring files
+        print(f"stopping docker container {container_id}...")
+        subprocess.run(['docker', 'stop', container_id])
+        # still closed it apparently
+        # produce connection aborted error (ConnectionAbortedError(10053...))
+
         print("Task completed, downloading results...")
 
-        # Retrieve results
+        # Retrieve results 
         task.download_assets(source_folder)
-        print(f"Assets saved in {source_folder} (%s)" % os.listdir(source_folder))
+
+        # print(f"Assets saved in {source_folder} (%s)" % os.listdir(source_folder))
 
     except exceptions.TaskFailedError as e:
         print("\n".join(task.output()))
@@ -47,8 +78,6 @@ except exceptions.NodeResponseError as e:
 except FileNotFoundError as e:
     print(e)
 
-print("Stopping Docker Container...")
-subprocess.run(["docker", "stop", "nodeodm"], shell=True)
 
 # ---------------------------------------
 # # Define the ODM docker command
