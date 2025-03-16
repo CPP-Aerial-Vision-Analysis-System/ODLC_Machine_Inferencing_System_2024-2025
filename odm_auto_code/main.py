@@ -56,19 +56,16 @@ try:
         # Wait for completion
         task.wait_for_completion()
 
-        # stop container first before transferring files
-        print(f"stopping docker container {container_id}...")
-        subprocess.run(['docker', 'stop', container_id])
-        # still closed it apparently
-        # produce connection aborted error (ConnectionAbortedError(10053...))
-
-        print("Task completed, downloading results...")
-
         # Retrieve results 
+        # IDEA: Make it an exception to allow the code to continue and close the container as this still produces results
         task.download_assets(source_folder)
 
-        # print(f"Assets saved in {source_folder} (%s)" % os.listdir(source_folder))
+    except OSError as e:
+        if e.errno == 32: 
+            print("Warning file in use, WinError 32 case")
+            # print(f"Assets saved in {source_folder} (%s)" % os.listdir(source_folder))
 
+            # print("Task completed, downloading results...")
     except exceptions.TaskFailedError as e:
         print("\n".join(task.output()))
 except exceptions.NodeConnectionError as e:
@@ -78,17 +75,9 @@ except exceptions.NodeResponseError as e:
 except FileNotFoundError as e:
     print(e)
 
-
-# ---------------------------------------
-# # Define the ODM docker command
-# cmd = [
-#     'docker', 'run', '-ti', '--rm', '-v', 'C:/Users/valde/Desktop/projects/ODM/datasets:/datasets', 'opendronemap/odm', '--project-path', '/datasets', 'drone_dataset_brighton_beach-master'
-# ]
-
-# process = subprocess.run(cmd, capture_output=True, text=True)
-
-# print(process.stdout)
-# print(process.stderr)
+# stop container first before transferring files
+print(f"stopping docker container {container_id}...")
+subprocess.run(['docker', 'stop', container_id])
 
 '''
 ODM results would be outputted to the same dataset folder that the images were taken from. Files are the same names
