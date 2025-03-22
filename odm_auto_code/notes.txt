@@ -33,5 +33,20 @@ https://github.com/OpenDroneMap/ODM
 
 Stated that easiest way to run it is through docker for terminal use, doing a docker run with the dataset.
 
+Be sure to clean unused docker containers
 
+See containers and Container_Name:
+docker container ps
 
+Manually stop docker container:
+docker stop Container_Name
+
+docker container prune
+
+-------------------------------------------------
+
+Settings changed in localhost
+
+Fast-orthophoto = Enabled
+
+pc-quality = Lowest

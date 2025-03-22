@@ -2,9 +2,9 @@ import os
 import time
 import shutil
 
-source_folder = r'./results'
+source_folder = r'/home/astra/ODLC_Machine_Inferencing_System_2024-2025/odm_auto_code/results'
 
-destination_folder = r'D:\test_results'
+destination_folder = r'/media/astra/ESD-USB/test_results'
 
 os.makedirs(destination_folder, exist_ok=True)
 

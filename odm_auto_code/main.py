@@ -4,8 +4,9 @@ import sys
 import time
 sys.path.append('..')
 
-from pyodm import Node, exceptions
+print("fuck you, FUCK YOU")
 
+from pyodm import Node, exceptions
 
 # running this process would require wiping past docker containers that have the same name nodeodm
 # process = subprocess.Popen(
@@ -14,11 +15,10 @@ from pyodm import Node, exceptions
 
 # Start the container and capture its ID
 process = subprocess.Popen(
-    ["docker", "run", "-d", "-p", "3000:3000", "opendronemap/nodeodm"],
+    ["docker", "run", "--runtime", "nvidia", "-d", "-p", "3000:3000", "opendronemap/nodeodm"],
     stdout=subprocess.PIPE,
     stderr=subprocess.PIPE
 )
-
 container_id, error = process.communicate()
 
 if error:
@@ -49,7 +49,11 @@ try:
     print(f"Uploading {len(image_paths)} images...")
 
     # Start a task with all images in the folder
-    task = node.create_task(image_paths, {'dsm': True, 'orthophoto-resolution': 4})
+
+    # dsm : Build a digital surface model, ground + objects
+    # orthophoto-resolution: cm / pixel, capped by ground sampling distance
+
+    task = node.create_task(image_paths, {'dsm': True, 'orthophoto-resolution': 2, 'pc-quality': 'low', 'fast-orthophoto' : True})
     print(task.info())
 
     try:
