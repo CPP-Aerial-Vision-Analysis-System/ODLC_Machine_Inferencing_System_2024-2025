@@ -5,6 +5,68 @@ import sys
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+
+def live_stitch():
+    # Initialize video capture
+    cap = cv2.VideoCapture(0)  # Use 0 for webcam or appropriate video source
+    
+    # Get first frame as reference
+    ret, reference = cap.read()
+    if not ret:
+        raise RuntimeError("Could not read from camera")
+    
+    # Initialize ORB detector
+    orb = cv2.ORB_create(nfeatures=2000)
+    # Initialize matcher
+    bf = cv2.BFMatcher_create(cv2.NORM_HAMMING)
+    
+    while True:
+        # Capture frame-by-frame
+        ret, frame = cap.read()
+        if not ret:
+            break
+            
+        # Find keypoints and descriptors
+        kp1, des1 = orb.detectAndCompute(reference, None)
+        kp2, des2 = orb.detectAndCompute(frame, None)
+        
+        try:
+            # Match features
+            matches = bf.knnMatch(des1, des2, k=2)
+            
+            # Filter good matches
+            good = []
+            for m, n in matches:
+                if m.distance < 0.6 * n.distance:
+                    good.append(m)
+                    
+            if len(good) > 5:  # Minimum matches threshold
+                # Get matching points
+                src_pts = np.float32([kp1[m.queryIdx].pt for m in good]).reshape(-1,1,2)
+                dst_pts = np.float32([kp2[m.trainIdx].pt for m in good]).reshape(-1,1,2)
+                
+                # Calculate Homography
+                M, _ = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+                
+                # Warp and blend images
+                result = warpImages(frame, reference, M)
+                
+                # Update reference frame
+                reference = result
+                
+                # Display result
+                cv2.imshow('Stitched Output', result)
+                
+        except Exception as e:
+            print(f"Frame processing error: {e}")
+            continue
+            
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    
+    cap.release()
+    cv2.destroyAllWindows()
+
 def warpImages(img1, img2, H):
   rows1, cols1 = img1.shape[:2]
   rows2, cols2 = img2.shape[:2]
@@ -100,3 +162,6 @@ while True:
 result = cv2.cvtColor(result, cv2.COLOR_BGR2RGB )  
 plt.imshow(result)
 plt.show()
+
+if __name__ == '__main__':
+    live_stitch()

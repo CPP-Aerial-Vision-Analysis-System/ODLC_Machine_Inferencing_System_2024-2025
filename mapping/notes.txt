@@ -2,3 +2,32 @@ Parallel Processing
 OpenCV
 
 https://github.com/sachin-vs/UAV-Image-stitching/blob/main/UAV-image-stitching.py
+
+Key modifications for live stitching:
+
+Uses video capture instead of loading static images
+Processes frames in real-time
+Updates reference frame continuously
+Includes error handling for dropped frames
+
+
+Limitations to consider:
+
+Performance may be slower due to real-time processing
+Memory usage increases over time
+Quality might be lower than batch processing
+May need additional optimization for real-time performance
+Camera movement should be relatively slow and smooth
+
+You would also need to adjust parameters like:
+
+Feature detection threshold
+Matching distance threshold
+Minimum match count
+Frame capture rate
+
+For better performance, you might want to:
+
+Resize frames to smaller dimensions
+Process every nth frame instead of all frames
+Use GPU acceleration if available
