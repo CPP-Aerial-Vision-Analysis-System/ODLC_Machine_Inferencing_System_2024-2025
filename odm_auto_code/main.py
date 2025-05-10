@@ -49,7 +49,7 @@ try:
     print(f"Uploading {len(image_paths)} images...")
 
     # Start a task with all images in the folder
-    task = node.create_task(image_paths, {'dsm': True, 'orthophoto-resolution': 4})
+    task = node.create_task(image_paths, {'dsm': True, 'orthophoto-resolution': 2, 'pc-quality':'low', 'fast-orthophoto' : True, 'skip-3dmodel': True, 'skip-report':True })
     print(task.info())
 
     try:
