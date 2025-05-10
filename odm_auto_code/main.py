@@ -53,8 +53,12 @@ try:
     # dsm : Build a digital surface model, ground + objects
     # orthophoto-resolution: cm / pixel, capped by ground sampling distance
 
-    task = node.create_task(image_paths, {'dsm': True, 'orthophoto-resolution': 2, 'pc-quality': 'low', 'fast-orthophoto' : True})
+    task = node.create_task(image_paths, {'dsm': True, 'orthophoto-resolution': 2, 'pc-quality':'low', 'fast-orthophoto' : True, 'skip-3dmodel': True, 'skip-report':True })
     print(task.info())
+
+    # task = node.create_task(image_paths, {'dsm': True, 'orthophoto-resolution': 2, 'pc-quality':'low', 'fast-orthophoto' : True, 'skip-3dmodel': True, 'skip-report':True, 'orthophoto-png':True })
+    # print(task.info())
+
 
     try:
         # Wait for completion
