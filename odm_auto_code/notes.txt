@@ -33,5 +33,24 @@ https://github.com/OpenDroneMap/ODM
 
 Stated that easiest way to run it is through docker for terminal use, doing a docker run with the dataset.
 
+Notes for image taking:
 
+Camera should be facing down directly
+no bright /dark shadows
+blurry images break stitching
+
+Phalaborwa-sm 36
+5:16, Nvidia 2070
+
+Phalaborwa-lg 126
+Up to at least 11 min, got unreachable warning but got results, Nvidia 2070
+
+
+Does EXIF play a matter in orthophoto?
+
+Double resolution size of images, 1280 instead of 640
+
+Test Yolov8l and Yolov8X
+
+Check CPU usage and RAM
 

@@ -7,14 +7,12 @@ sys.path.append('..')
 from pyodm import Node, exceptions
 
 
-# running this process would require wiping past docker containers that have the same name nodeodm
-# process = subprocess.Popen(
-#     ["docker", "run", "-d", "--name", "nodeodm", "-p", "3000:3000", "opendronemap/nodeodm"],
-# )
+# Stop and remove any existing container
+subprocess.run(["docker", "rm", "-f", "nodeodm"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-# Start the container and capture its ID
+# Start container
 process = subprocess.Popen(
-    ["docker", "run", "-d", "-p", "3000:3000", "opendronemap/nodeodm"],
+    ["docker", "run", "-d", "--name", "nodeodm", "-p", "3000:3000", "opendronemap/nodeodm"],
     stdout=subprocess.PIPE,
     stderr=subprocess.PIPE
 )
@@ -38,7 +36,8 @@ node = Node("localhost", 3000)
 source_folder = r'./results'
 
 # add proper jetson directory here
-image_folder = r'C:\Users\valde\Desktop\projects\ODM\datasets\drone_dataset_brighton_beach-master\images'
+# image_folder = r'C:\Users\valde\Desktop\projects\ODM\datasets\drone_dataset_brighton_beach-master\images'
+image_folder = r'C:\Users\valde\Desktop\CS classes\senior_projects\ODLC_Machine_Inferencing_System_2024-2025\Phalaborwa_sm\Phalaborwa_5530'
 
 image_paths = [os.path.join(image_folder, f) for f in os.listdir(image_folder) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
 
@@ -49,7 +48,7 @@ try:
     print(f"Uploading {len(image_paths)} images...")
 
     # Start a task with all images in the folder
-    task = node.create_task(image_paths, {'dsm': True, 'orthophoto-resolution': 4})
+    task = node.create_task(image_paths, {'dsm': True, 'orthophoto-resolution': 2, 'pc-quality': 'low', 'fast-orthophoto' : True, 'skip-3dmodel': True, 'min-num-features': 10000, 'matcher-neighbors': 8})
     print(task.info())
 
     try:
