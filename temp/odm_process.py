@@ -41,7 +41,7 @@ class ODMProcessor:
 
         options = {
             'dsm': True,
-            'orthophoto-resolution': 1,
+            'orthophoto-resolution': 2,
             'pc-quality': 'low',
             'fast-orthophoto': True,
             'skip-3dmodel': True,
