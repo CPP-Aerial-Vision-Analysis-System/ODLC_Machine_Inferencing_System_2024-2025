@@ -1,41 +1,101 @@
 import sys
-import glob
-import os
 import cv2
+import glob
 import numpy as np
 import matplotlib.pyplot as plt
+from pathlib import Path
 
-def warpImages(img1, img2, H, max_size=10000):
-    rows1, cols1 = img1.shape[:2]
-    rows2, cols2 = img2.shape[:2]
 
-    list_of_points_1 = np.float32([[0, 0], [0, rows1], [cols1, rows1], [cols1, 0]]).reshape(-1, 1, 2)
-    temp_points = np.float32([[0, 0], [0, rows2], [cols2, rows2], [cols2, 0]]).reshape(-1, 1, 2)
+class ImageStitcher:
+    def __init__(self, nfeatures=5000, min_matches=5, distance_threshold=0.6):
+        self.orb = cv2.ORB_create(nfeatures=nfeatures, scaleFactor=1.2, nlevels=8)
+        self.min_matches = min_matches
+        self.distance_threshold = distance_threshold
+        self.result = None
 
-    list_of_points_2 = cv2.perspectiveTransform(temp_points, H)
-    list_of_points = np.concatenate((list_of_points_1, list_of_points_2), axis=0)
+    def load_images(self, folder_path, max_size=2000):
+        """Load and resize images from specified folder"""
+        path = sorted(Path(folder_path).glob("*.jpg"))
+        img_list = []
+        
+        print("Loading and resizing images...")
+        for img_path in path:
+            img = cv2.imread(str(img_path))
+            if img is not None:
+                # Resize image while maintaining aspect ratio
+                height, width = img.shape[:2]
+                if height > max_size or width > max_size:
+                    scale = max_size / max(height, width)
+                    new_size = (int(width * scale), int(height * scale))
+                    img = cv2.resize(img, new_size, interpolation=cv2.INTER_AREA)
+                img_list.append(img)
+                print(f"Loaded and processed: {img_path.name}")
+            
+        if len(img_list) < 2:
+            raise ValueError("At least 2 images required for stitching")
+        return img_list
 
-    [x_min, y_min] = np.int32(list_of_points.min(axis=0).ravel() - 0.5)
-    [x_max, y_max] = np.int32(list_of_points.max(axis=0).ravel() + 0.5)
+    def stitch_images(self, folder_path):
+        """Main stitching process"""
+        img_list = self.load_images(folder_path)
+        print(f"Processing {len(img_list)} images...")
 
-    translation_dist = [-x_min, -y_min]
-    H_translation = np.array([[1, 0, translation_dist[0]], [0, 1, translation_dist[1]], [0, 0, 1]])
+        while len(img_list) > 1:
+            img1 = img_list.pop(0)
+            img2 = img_list.pop(0)
 
-    output_width = x_max - x_min
-    output_height = y_max - y_min
+            # Extract features
+            self.sift = cv2.SIFT_create()
+            kp1, des1 = self.orb.detectAndCompute(img1, None)
+            kp2, des2 = self.orb.detectAndCompute(img2, None)
 
-    # Check if output dimensions exceed max_size
-    if output_width > max_size or output_height > max_size:
-        scale = min(max_size / output_width, max_size / output_height)
-        print(f"Resizing output image by scale factor: {scale:.2f}")
-        img1 = cv2.resize(img1, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
-        img2 = cv2.resize(img2, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+            if des1 is None or des2 is None:
+                print("Warning: No features detected in one or both images")
+                continue
+
+            # # Match features using FLANN-based matcher
+            # index_params = dict(algorithm=6,  # FLANN_INDEX_LSH
+            #                     table_number=6,  # Number of hash tables
+            #                     key_size=12,     # Size of the hash key
+            #                     multi_probe_level=1)  # Number of probes
+            # search_params = dict(checks=50)  # Number of times the tree is traversed
+
+            # flann = cv2.FlannBasedMatcher(index_params, search_params)
+            # matches = flann.knnMatch(des1, des2, k=2)
+            bf = cv2.BFMatcher_create(cv2.NORM_HAMMING)
+            matches = bf.knnMatch(des1, des2, k=2)
+
+            # Filter good matches
+            good = []
+            for m, n in matches:
+                if m.distance < self.distance_threshold * n.distance:  # Apply ratio test
+                    good.append(m)
+
+            if len(good) > self.min_matches:
+                # Get matching points
+                src_pts = np.float32([kp1[m.queryIdx].pt for m in good]).reshape(-1, 1, 2) #Reshaping Images to be Compatible
+                dst_pts = np.float32([kp2[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
+
+                # Calculate homography
+                M, _ = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+                
+                # Warp and combine images
+                result = self.warp_images(img2, img1, M)
+                img_list.insert(0, result)
+
+            if len(img_list) == 1:
+                self.result = cv2.cvtColor(img_list[0], cv2.COLOR_BGR2RGB)
+                break
+
+    def warp_images(self, img1, img2, H):
+        """Warp and blend two images using homography matrix with size checking and cropping"""
         rows1, cols1 = img1.shape[:2]
         rows2, cols2 = img2.shape[:2]
 
-        # Recalculate points and homography for resized images
+        # Calculate the bounding box for the stitched image
         list_of_points_1 = np.float32([[0, 0], [0, rows1], [cols1, rows1], [cols1, 0]]).reshape(-1, 1, 2)
         temp_points = np.float32([[0, 0], [0, rows2], [cols2, rows2], [cols2, 0]]).reshape(-1, 1, 2)
+
         list_of_points_2 = cv2.perspectiveTransform(temp_points, H)
         list_of_points = np.concatenate((list_of_points_1, list_of_points_2), axis=0)
 
@@ -45,71 +105,56 @@ def warpImages(img1, img2, H, max_size=10000):
         translation_dist = [-x_min, -y_min]
         H_translation = np.array([[1, 0, translation_dist[0]], [0, 1, translation_dist[1]], [0, 0, 1]])
 
-    output_img = cv2.warpPerspective(img2, H_translation.dot(H), (x_max - x_min, y_max - y_min))
-    output_img[translation_dist[1]:rows1 + translation_dist[1], translation_dist[0]:cols1 + translation_dist[0]] = img1
+        # Warp the second image
+        output_img = cv2.warpPerspective(img2, H_translation.dot(H), (x_max - x_min, y_max - y_min))
+        output_img[translation_dist[1]:rows1 + translation_dist[1], translation_dist[0]:cols1 + translation_dist[0]] = img1
 
-    return output_img
+        # Crop the black space
+        gray = cv2.cvtColor(output_img, cv2.COLOR_BGR2GRAY)
+        _, thresh = cv2.threshold(gray, 1, 255, cv2.THRESH_BINARY)
+        x, y, w, h = cv2.boundingRect(thresh)
+        cropped_output = output_img[y:y + h, x:x + w]
 
-#folfer containing images from drones, sorted by name 
-image_folder = r"C:\Users\valde\Desktop\CS classes\senior_projects\ODLC_Machine_Inferencing_System_2024-2025\images_collection\images"
-path = sorted(glob.glob(os.path.join(image_folder, "*.jpg")))
-img_list = []
-for img in path:
-    n = cv2.imread(img)
-    if n is not None:
-        height, width = n.shape[:2]
-        if height > 2000 or width > 2000:
-            scale = 2000 / max(height, width)
-            n = cv2.resize(n, (int(width * scale), int(height * scale)), interpolation=cv2.INTER_AREA)
-        img_list.append(n)
-print(f"Total images loaded: {len(img_list)}")
-
-"""Functions for stitching"""
-
-#Use ORB detector to extract keypoints
-orb = cv2.ORB_create(nfeatures=2000)
-while True:
-  img1=img_list.pop(0)
-  img2=img_list.pop(0)
-# Find the key points and descriptors with ORB
-  keypoints1, descriptors1 = orb.detectAndCompute(img1, None)#descriptors are arrays of numbers that define the keypoints
-  keypoints2, descriptors2 = orb.detectAndCompute(img2, None)
-
-
-# Create a BFMatcher object to match descriptors
-# It will find all of the matching keypoints on two images
-  bf = cv2.BFMatcher_create(cv2.NORM_HAMMING)#NORM_HAMMING specifies the distance as a measurement of similarity between two descriptors
-
-# Find matching points
-  matches = bf.knnMatch(descriptors1, descriptors2,k=2)
-
-  all_matches = []
-  for m, n in matches:
-    all_matches.append(m)
-# Finding the best matches
-  good = []
-  for m, n in matches:
-    if m.distance < 0.6 * n.distance:#Threshold
-        good.append(m)
-
-# Set minimum match condition
-  MIN_MATCH_COUNT = 5
-
-  if len(good) > MIN_MATCH_COUNT:
+        return cropped_output
     
-    # Convert keypoints to an argument for findHomography
-    src_pts = np.float32([ keypoints1[m.queryIdx].pt for m in good]).reshape(-1,1,2)
-    dst_pts = np.float32([ keypoints2[m.trainIdx].pt for m in good]).reshape(-1,1,2)
+    def show_result(self):
+        """Display the stitched result"""
+        if self.result is not None:
+            plt.figure(figsize=(15, 10))
+            plt.imshow(self.result)
+            plt.axis('off')
+            plt.show()
+        else:
+            print("No result available. Run stitch_images first.")
 
-    # Establish a homography
-    M, _ = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC,5.0)
-    
-    result = warpImages(img2, img1, M, max_size=10000)
-    
-    img_list.insert(0,result)
-    
-    if len(img_list)==1:
-      break
-result = cv2.cvtColor(result, cv2.COLOR_BGR2RGB )  
-plt.imshow(result)
-plt.show()
+    def save_result(self, output_path):
+        """Save the stitched result"""
+        if self.result is not None:
+            cv2.imwrite(output_path, cv2.cvtColor(self.result, cv2.COLOR_RGB2BGR))
+            print(f"Result saved to {output_path}")
+
+if __name__ == "__main__":
+    # Initialize stitcher with optional parameters
+    stitcher = ImageStitcher(
+        nfeatures=2000,        # Number of ORB features to detect
+        min_matches=5,         # Minimum matches required
+        distance_threshold=0.7  # Distance threshold for matching
+    )
+
+    # Process images
+    try:
+        # Specify your image folder path
+        image_folder = r'C:\Users\valde\Desktop\cs_classes\SUAS\ODLC_Machine_Inferencing_System_2024-2025\5-25-25_images\test_3'
+        
+        # Stitch images
+        stitcher.stitch_images(image_folder)
+        
+        # Save with timestamp and size indication
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        stitcher.save_result(f"stitched_output_{timestamp}.jpg")
+        
+        stitcher.show_result()
+        
+    except Exception as e:
+        print(f"Error during stitching: {e}")
