@@ -7,7 +7,7 @@ processor = ODMProcessor()
 try:
     processor.start_container()
     processor.process_images(
-        image_folder=r'C:\Users\valde\Desktop\cs_classes\SUAS\ODLC_Machine_Inferencing_System_2024-2025\5-25-25_images\test_3',
+        image_folder=r'C:\Users\valde\Desktop\CS classes\senior_projects\ODLC_Machine_Inferencing_System_2024-2025\images_collection\mapping',
         source_folder=r'C:\Users\valde\Desktop\cs_classes\SUAS\ODLC_Machine_Inferencing_System_2024-2025\odm_auto_code\results'
     )
 finally:

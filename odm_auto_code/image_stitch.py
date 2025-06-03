@@ -1,6 +1,7 @@
 import sys
 import cv2
 import glob
+import shutil
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -127,11 +128,25 @@ class ImageStitcher:
         else:
             print("No result available. Run stitch_images first.")
 
+    # save result to desired folder, make folder if not defined
     def save_result(self, output_path):
         """Save the stitched result"""
         if self.result is not None:
+            Path(output_path).parent.mkdir(parents=True,exist_ok=True)
+
+            # save result
             cv2.imwrite(output_path, cv2.cvtColor(self.result, cv2.COLOR_RGB2BGR))
             print(f"Result saved to {output_path}")
+
+# optional function, not part of class Stitch
+def file_transfer(destination_folder, result_file):
+    try:
+        Path(destination_folder).mkdir(parents=True, exist_ok=True)
+        destination_path = Path(destination_folder) / Path(result_file).name
+        shutil.copy(result_file, destination_path)
+        print(f"Result file transferred to: {destination_path}")
+    except Exception as e:
+        print(f"Error during file transfer: {e}")
 
 if __name__ == "__main__":
     # Initialize stitcher with optional parameters
@@ -144,17 +159,24 @@ if __name__ == "__main__":
     # Process images
     try:
         # Specify your image folder path
-        image_folder = r'C:\Users\valde\Desktop\cs_classes\SUAS\ODLC_Machine_Inferencing_System_2024-2025\5-25-25_images\test_3'
-        
+        image_folder = r'C:\Users\valde\Desktop\CS classes\senior_projects\ODLC_Machine_Inferencing_System_2024-2025\images_collection\camera_feed-20250603T025101Z-1-001\camera_feed\soccer'
+
+        # Specify your destination for result folder
+        destination_folder = r'C:\Users\valde\Desktop\CS classes\senior_projects\ODLC_Machine_Inferencing_System_2024-2025\test'
+
         # Stitch images
         stitcher.stitch_images(image_folder)
         
         # Save with timestamp and size indication
         from datetime import datetime
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        stitcher.save_result(f"stitched_output_{timestamp}.jpg")
+        result_file = Path(destination_folder) / f"stitched_output_{timestamp}.jpg"
+        stitcher.save_result(str(result_file))
         
-        stitcher.show_result()
-        
+        #stitcher.show_result()
+
+        # useful for file transfer, instead integrated into save_result
+        # file_transfer(destination_folder, result_file)
+
     except Exception as e:
         print(f"Error during stitching: {e}")
