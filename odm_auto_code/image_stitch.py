@@ -93,13 +93,13 @@ class ImageStitcher:
         [x_min, y_min] = np.int32(list_of_points.min(axis=0).ravel() - 0.5)
         [x_max, y_max] = np.int32(list_of_points.max(axis=0).ravel() + 0.5)
 
-        width = x_max - x_min
-        height = y_max - y_min
-        max_output_size = 10000 * 10000  # adjust as needed
+        width = int(x_max - x_min)
+        height = int(y_max - y_min)
+        max_output_size = 10000 * 10000 # modify for higher limit, jetson low
 
-        if width * height > max_output_size:
+        if width > 20000 or height > 20000 or (width * height > max_output_size): # max before runtime error
             print(f"⚠️ Skipping warp: estimated output size too large ({width}x{height})")
-            return img1  # or return None
+            return img1
 
         translation_dist = [-x_min, -y_min]
         H_translation = np.array([[1, 0, translation_dist[0]],
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     # Process images
     try:
         # Specify your image folder path
-        image_folder = r'/home/astra/ODLC_Machine_Inferencing_System_2024-2025/odm_auto_code/datasets/06-08-25'
+        image_folder = r'/home/astra/ODLC_Machine_Inferencing_System_2024-2025/odm_auto_code/datasets/test_4'
         # Specify your destination for result folder
         destination_folder = r'/home/astra/ODLC_Machine_Inferencing_System_2024-2025/odm_auto_code/results'
 
