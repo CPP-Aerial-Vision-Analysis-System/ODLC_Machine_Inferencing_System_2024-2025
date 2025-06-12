@@ -1,6 +1,4 @@
-import sys
 import cv2
-import glob
 import shutil
 import numpy as np
 import matplotlib.pyplot as plt
@@ -46,7 +44,7 @@ class ImageStitcher:
             img2 = img_list.pop(0)
 
             # Extract features
-            self.sift = cv2.SIFT_create()
+            #self.sift = cv2.SIFT_create()
             kp1, des1 = self.orb.detectAndCompute(img1, None)
             kp2, des2 = self.orb.detectAndCompute(img2, None)
 
@@ -54,15 +52,6 @@ class ImageStitcher:
                 print("Warning: No features detected in one or both images")
                 continue
 
-            # # Match features using FLANN-based matcher
-            # index_params = dict(algorithm=6,  # FLANN_INDEX_LSH
-            #                     table_number=6,  # Number of hash tables
-            #                     key_size=12,     # Size of the hash key
-            #                     multi_probe_level=1)  # Number of probes
-            # search_params = dict(checks=50)  # Number of times the tree is traversed
-
-            # flann = cv2.FlannBasedMatcher(index_params, search_params)
-            # matches = flann.knnMatch(des1, des2, k=2)
             bf = cv2.BFMatcher_create(cv2.NORM_HAMMING)
             matches = bf.knnMatch(des1, des2, k=2)
 
@@ -81,19 +70,20 @@ class ImageStitcher:
                 M, _ = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
                 
                 # Warp and combine images
-                result = self.warp_images(img2, img1, M)
-                img_list.insert(0, result)
+                if M is not None:
+                    result = self.warp_images(img2, img1, M)
+                    img_list.insert(0, result)
+                else:
+                    print("Warning: Homography could not be computed. Skipping this pair.")
 
             if len(img_list) == 1:
                 self.result = cv2.cvtColor(img_list[0], cv2.COLOR_BGR2RGB)
                 break
 
     def warp_images(self, img1, img2, H):
-        """Warp and blend two images using homography matrix with size checking and cropping"""
         rows1, cols1 = img1.shape[:2]
         rows2, cols2 = img2.shape[:2]
 
-        # Calculate the bounding box for the stitched image
         list_of_points_1 = np.float32([[0, 0], [0, rows1], [cols1, rows1], [cols1, 0]]).reshape(-1, 1, 2)
         temp_points = np.float32([[0, 0], [0, rows2], [cols2, rows2], [cols2, 0]]).reshape(-1, 1, 2)
 
@@ -103,21 +93,30 @@ class ImageStitcher:
         [x_min, y_min] = np.int32(list_of_points.min(axis=0).ravel() - 0.5)
         [x_max, y_max] = np.int32(list_of_points.max(axis=0).ravel() + 0.5)
 
+        width = x_max - x_min
+        height = y_max - y_min
+        max_output_size = 10000 * 10000  # adjust as needed
+
+        if width * height > max_output_size:
+            print(f"⚠️ Skipping warp: estimated output size too large ({width}x{height})")
+            return img1  # or return None
+
         translation_dist = [-x_min, -y_min]
-        H_translation = np.array([[1, 0, translation_dist[0]], [0, 1, translation_dist[1]], [0, 0, 1]])
+        H_translation = np.array([[1, 0, translation_dist[0]],
+                                [0, 1, translation_dist[1]],
+                                [0, 0, 1]])
 
-        # Warp the second image
-        output_img = cv2.warpPerspective(img2, H_translation.dot(H), (x_max - x_min, y_max - y_min))
-        output_img[translation_dist[1]:rows1 + translation_dist[1], translation_dist[0]:cols1 + translation_dist[0]] = img1
+        output_img = cv2.warpPerspective(img2, H_translation.dot(H), (width, height))
+        output_img[translation_dist[1]:rows1 + translation_dist[1],
+                translation_dist[0]:cols1 + translation_dist[0]] = img1
 
-        # Crop the black space
         gray = cv2.cvtColor(output_img, cv2.COLOR_BGR2GRAY)
         _, thresh = cv2.threshold(gray, 1, 255, cv2.THRESH_BINARY)
         x, y, w, h = cv2.boundingRect(thresh)
         cropped_output = output_img[y:y + h, x:x + w]
 
         return cropped_output
-    
+        
     def show_result(self):
         """Display the stitched result"""
         if self.result is not None:
@@ -159,10 +158,9 @@ if __name__ == "__main__":
     # Process images
     try:
         # Specify your image folder path
-        image_folder = r'C:\Users\valde\Desktop\CS classes\senior_projects\ODLC_Machine_Inferencing_System_2024-2025\images_collection\camera_feed-20250603T025101Z-1-001\camera_feed\soccer'
-
+        image_folder = r'/home/astra/ODLC_Machine_Inferencing_System_2024-2025/odm_auto_code/datasets/06-08-25'
         # Specify your destination for result folder
-        destination_folder = r'C:\Users\valde\Desktop\CS classes\senior_projects\ODLC_Machine_Inferencing_System_2024-2025\test'
+        destination_folder = r'/home/astra/ODLC_Machine_Inferencing_System_2024-2025/odm_auto_code/results'
 
         # Stitch images
         stitcher.stitch_images(image_folder)
